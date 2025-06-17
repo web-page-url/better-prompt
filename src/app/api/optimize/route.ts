@@ -48,27 +48,27 @@ export async function POST(request: NextRequest) {
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
     const response = await fetch(OPENROUTER_API_URL, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-        'HTTP-Referer': process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000',
-        'X-Title': 'Better Prompt - Prompt Optimizer',
+        "Authorization": `Bearer ${apiKey}`,
+        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+        "X-Title": "Better Prompt - Prompt Optimizer",
+        "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model,
-        messages: [
+        "model": model,
+        "messages": [
           {
-            role: 'system',
-            content: enhancedSystemPrompt
+            "role": "system",
+            "content": enhancedSystemPrompt
           },
           {
-            role: 'user',
-            content: prompt
+            "role": "user",
+            "content": prompt
           }
         ],
-        max_tokens: 1000,
-        temperature: 0.7,
+        "max_tokens": 1000,
+        "temperature": 0.7
       }),
       signal: controller.signal,
     });
@@ -77,9 +77,31 @@ export async function POST(request: NextRequest) {
 
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('OpenRouter API error:', errorData);
+      console.error('OpenRouter API error:', response.status, errorData);
+      
+      if (response.status === 401) {
+        return NextResponse.json(
+          { error: 'Invalid API key or insufficient permissions. Please check your OpenRouter API key.' },
+          { status: 401 }
+        );
+      }
+      
+      if (response.status === 402) {
+        return NextResponse.json(
+          { error: 'Insufficient credits or quota exceeded. Try a different free model.' },
+          { status: 402 }
+        );
+      }
+      
+      if (response.status === 429) {
+        return NextResponse.json(
+          { error: 'Rate limit exceeded. Please wait a moment and try again.' },
+          { status: 429 }
+        );
+      }
+      
       return NextResponse.json(
-        { error: 'Failed to optimize prompt' },
+        { error: `OpenRouter API error (${response.status}): ${errorData}` },
         { status: response.status }
       );
     }

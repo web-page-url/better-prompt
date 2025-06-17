@@ -15,20 +15,24 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [selectedModel, setSelectedModel] = useState('meta-llama/llama-3.1-8b-instruct:free');
+  const [selectedModel, setSelectedModel] = useState('deepseek/deepseek-r1-distill-llama-70b:free');
   const [selectedTone, setSelectedTone] = useState('professional');
   const [selectedType, setSelectedType] = useState('general');
   const [copyFeedback, setCopyFeedback] = useState('');
 
   const models = [
+   
+    // { id: 'google/gemma-3n-e4b-it:free', name: 'Google Gemma 3N E4B IT (Free)' },
     { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Llama 3.1 8B' },
     { id: 'qwen/qwen-2.5-72b-instruct:free', name: 'Qwen 2.5 72B' },
-    // { id: 'google/gemini-flash-1.5-8b:free', name: 'Gemini Flash 1.5 8B' },
     { id: 'deepseek/deepseek-r1-distill-llama-70b:free', name: 'DeepSeek R1 Distill 70B' },
+    { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B' },
+    { id: 'moonshotai/kimi-dev-72b:free', name: 'Kimi Dev 72B (Free)' },
+    { id: 'microsoft/phi-4-reasoning:free', name: 'Microsoft Phi-4 Reasoning' },
+    // { id: 'google/gemini-flash-1.5-8b:free', name: 'Gemini Flash 1.5 8B' },
     // { id: 'anthropic/claude-sonnet-4', name: 'Claude Sonnet 4' },
     // { id: 'nvidia/llama-3.3-nemotron-super-49b-v1:free', name: 'Llama 3.3 Nemotron 49B' },
     // { id: 'deepseek/deepseek-v3-base:free', name: 'DeepSeek V3 Base' },
-    { id: 'mistralai/mistral-7b-instruct:free', name: 'Mistral 7B' },
     // { id: 'huggingface/zephyr-7b-beta:free', name: 'Zephyr 7B Beta' },
     // { id: 'openchat/openchat-7b:free', name: 'OpenChat 7B' },
     // { id: 'gryphe/mythomist-7b:free', name: 'MythoMist 7B' },
@@ -80,8 +84,17 @@ export default function Home() {
 
       if (!response.ok) {
         // If OpenRouter fails, try local optimization
-        if (response.status === 503 || response.status === 408) {
-          console.log('OpenRouter unavailable, using local optimization...');
+        if (response.status === 503 || response.status === 408 || response.status === 401 || response.status === 402) {
+          const reasonMap = {
+            503: 'OpenRouter service unavailable',
+            408: 'Request timeout',
+            401: 'Authentication failed',
+            402: 'Insufficient credits'
+          };
+          
+          const reason = reasonMap[response.status as keyof typeof reasonMap] || 'OpenRouter unavailable';
+          console.log(`${reason}, using local optimization...`);
+          
           const fallbackResponse = await fetch('/api/optimize-local', {
             method: 'POST',
             headers: {
@@ -96,7 +109,7 @@ export default function Home() {
           
           if (fallbackResponse.ok) {
             setOptimizedPrompt(fallbackData.optimizedPrompt);
-            setError('⚠️ Using local optimization (OpenRouter unavailable)');
+            setError(`⚠️ Using local optimization (${reason})`);
             return;
           }
         }
