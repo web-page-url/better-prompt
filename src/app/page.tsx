@@ -19,6 +19,7 @@ export default function Home() {
   const [selectedTone, setSelectedTone] = useState('professional');
   const [selectedType, setSelectedType] = useState('general');
   const [copyFeedback, setCopyFeedback] = useState('');
+  const [lastRequestTime, setLastRequestTime] = useState(0);
 
   const models = [
    
@@ -62,6 +63,16 @@ export default function Home() {
       return;
     }
 
+    // Check if user is making requests too quickly
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTime;
+    if (timeSinceLastRequest < 2000) { // 2 second minimum between requests
+      const waitTime = 2000 - timeSinceLastRequest;
+      setError(`Please wait ${Math.ceil(waitTime / 1000)} seconds before making another request`);
+      return;
+    }
+    
+    setLastRequestTime(now);
     setIsLoading(true);
     setError('');
     
@@ -84,12 +95,13 @@ export default function Home() {
 
       if (!response.ok) {
         // If OpenRouter fails, try local optimization
-        if (response.status === 503 || response.status === 408 || response.status === 401 || response.status === 402) {
+        if (response.status === 503 || response.status === 408 || response.status === 401 || response.status === 402 || response.status === 429) {
           const reasonMap = {
             503: 'OpenRouter service unavailable',
             408: 'Request timeout',
             401: 'Authentication failed',
-            402: 'Insufficient credits'
+            402: 'Insufficient credits',
+            429: 'Rate limit exceeded'
           };
           
           const reason = reasonMap[response.status as keyof typeof reasonMap] || 'OpenRouter unavailable';
@@ -118,6 +130,11 @@ export default function Home() {
       }
 
       setOptimizedPrompt(data.optimizedPrompt);
+      
+      // Show which API key was used if it's the secondary one
+      if (data.apiKeyUsed === 'secondary') {
+        setError('✅ Using secondary API key (primary key exhausted)');
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
@@ -279,7 +296,7 @@ export default function Home() {
               onClick={optimizePrompt}
               disabled={isLoading || !inputPrompt.trim()}
               className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
-            >
+          >
               {isLoading ? (
                 <>
                   <Loader2 className="h-5 w-5 animate-spin" />
@@ -345,7 +362,7 @@ export default function Home() {
                 <button
                   onClick={startNew}
                   className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
-                >
+          >
                   <RotateCcw className="h-4 w-4" />
                   Start New
                 </button>
@@ -357,16 +374,16 @@ export default function Home() {
         {/* Footer */}
         <footer className="mt-12 text-center text-gray-600 dark:text-gray-400">
           <p className="text-sm">
-            Powered by{' '}
+            Created with ❤️ by{' '}
             <a 
-              href="https://openrouter.ai" 
+              href="https://www.linkedin.com/in/anubhav-chaudhary-4bba7918b/" 
           target="_blank"
           rel="noopener noreferrer"
               className="text-indigo-600 dark:text-indigo-400 hover:underline"
             >
-              OpenRouter
+            Anubhav
             </a>
-            {' '}• Built with Next.js & Tailwind CSS
+            {/* {' '}• Built with Next.js & Tailwind CSS */}
           </p>
       </footer>
       </div>

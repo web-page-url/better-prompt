@@ -14,9 +14,40 @@ Instructions:
 Respond ONLY with the improved prompt.
 Do not add explanations or extra comments.`;
 
+// Helper function to make OpenRouter API call
+async function makeOpenRouterRequest(apiKey: string, model: string, enhancedSystemPrompt: string, prompt: string, controller: AbortController) {
+  const response = await fetch(OPENROUTER_API_URL, {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey}`,
+      "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
+      "X-Title": "Better Prompt - Prompt Optimizer",
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      "model": model,
+      "messages": [
+        {
+          "role": "system",
+          "content": enhancedSystemPrompt
+        },
+        {
+          "role": "user",
+          "content": prompt
+        }
+      ],
+      "max_tokens": 1000,
+      "temperature": 0.7
+    }),
+    signal: controller.signal,
+  });
+  
+  return response;
+}
+
 export async function POST(request: NextRequest) {
   try {
-    const { prompt, model = 'meta-llama/llama-3.1-8b-instruct:free', tone = 'professional', type = 'general' } = await request.json();
+    const { prompt, model = 'deepseek/deepseek-r1-distill-llama-70b:free', tone = 'professional', type = 'general' } = await request.json();
 
     if (!prompt || prompt.trim().length === 0) {
       return NextResponse.json(
@@ -25,10 +56,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) {
+    const apiKey1 = process.env.OPENROUTER_API_KEY;
+    const apiKey2 = process.env.OPENROUTER_API_KEY2;
+    
+    if (!apiKey1 && !apiKey2) {
       return NextResponse.json(
-        { error: 'OpenRouter API key not configured' },
+        { error: 'OpenRouter API keys not configured' },
         { status: 500 }
       );
     }
@@ -47,31 +80,41 @@ export async function POST(request: NextRequest) {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-    const response = await fetch(OPENROUTER_API_URL, {
-      method: "POST",
-      headers: {
-        "Authorization": `Bearer ${apiKey}`,
-        "HTTP-Referer": process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
-        "X-Title": "Better Prompt - Prompt Optimizer",
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        "model": model,
-        "messages": [
-          {
-            "role": "system",
-            "content": enhancedSystemPrompt
-          },
-          {
-            "role": "user",
-            "content": prompt
-          }
-        ],
-        "max_tokens": 1000,
-        "temperature": 0.7
-      }),
-      signal: controller.signal,
-    });
+    let response;
+    let usingKey2 = false;
+    
+    // Try primary API key first
+    if (apiKey1) {
+      try {
+        response = await makeOpenRouterRequest(apiKey1, model, enhancedSystemPrompt, prompt, controller);
+        
+        // If primary key is rate limited (429) or has quota issues (402), try secondary key
+        if ((response.status === 429 || response.status === 402) && apiKey2) {
+          console.log('Primary API key exhausted, switching to secondary key...');
+          response = await makeOpenRouterRequest(apiKey2, model, enhancedSystemPrompt, prompt, controller);
+          usingKey2 = true;
+        }
+      } catch (error) {
+        // If primary key fails due to network issues and we have a secondary key, try it
+        if (apiKey2) {
+          console.log('Primary API key failed, trying secondary key...');
+          response = await makeOpenRouterRequest(apiKey2, model, enhancedSystemPrompt, prompt, controller);
+          usingKey2 = true;
+        } else {
+          throw error;
+        }
+      }
+    } else if (apiKey2) {
+      // If only secondary key is available
+      response = await makeOpenRouterRequest(apiKey2, model, enhancedSystemPrompt, prompt, controller);
+      usingKey2 = true;
+    } else {
+      clearTimeout(timeoutId);
+      return NextResponse.json(
+        { error: 'No valid API keys configured' },
+        { status: 500 }
+      );
+    }
 
     clearTimeout(timeoutId);
 
@@ -119,7 +162,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       optimizedPrompt: optimizedPrompt.trim(),
       model,
-      usage: data.usage
+      usage: data.usage,
+      apiKeyUsed: usingKey2 ? 'secondary' : 'primary'
     });
 
   } catch (error) {
