@@ -208,7 +208,7 @@ export default function Home() {
             <textarea
               value={inputPrompt}
               onChange={(e) => setInputPrompt(e.target.value)}
-              placeholder="Enter your rough idea or poorly structured prompt here..."
+              placeholder="Enter your idea or prompt here, and I'll help make it more effective..."
               className="w-full h-32 p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
               disabled={isLoading}
             />
