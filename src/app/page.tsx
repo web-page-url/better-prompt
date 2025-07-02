@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { Copy, RefreshCw, RotateCcw, Sparkles, Settings, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Copy, RefreshCw, RotateCcw, Sparkles, Settings, Loader2, Mic, MicOff } from 'lucide-react';
 
 interface OptimizationResult {
   optimizedPrompt: string;
@@ -20,6 +20,100 @@ export default function Home() {
   const [selectedType, setSelectedType] = useState('general');
   const [copyFeedback, setCopyFeedback] = useState('');
   const [lastRequestTime, setLastRequestTime] = useState(0);
+  
+  // Voice input state
+  const [isRecording, setIsRecording] = useState(false);
+  const [voiceError, setVoiceError] = useState('');
+  const [transcript, setTranscript] = useState('');
+  const [isVoiceSupported, setIsVoiceSupported] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Check for voice support on component mount
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    setIsVoiceSupported(!!SpeechRecognition);
+  }, []);
+
+  // Cleanup voice recognition on component unmount
+  useEffect(() => {
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+    };
+  }, []);
+
+  // Voice recognition functions
+  const startVoiceRecording = () => {
+    if (!isVoiceSupported) {
+      setVoiceError('Voice input is not supported in your browser');
+      return;
+    }
+
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const recognition = new SpeechRecognition();
+    
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+
+    recognition.onstart = () => {
+      setIsRecording(true);
+      setVoiceError('');
+      setTranscript('');
+    };
+
+    recognition.onresult = (event: any) => {
+      let finalTranscript = '';
+      let interimTranscript = '';
+
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalTranscript += transcript + ' ';
+        } else {
+          interimTranscript += transcript;
+        }
+      }
+
+      const fullTranscript = finalTranscript + interimTranscript;
+      setTranscript(fullTranscript);
+      
+      // Update input prompt with voice input
+      if (finalTranscript) {
+        setInputPrompt(prev => prev + finalTranscript);
+      }
+    };
+
+    recognition.onerror = (event: any) => {
+      setVoiceError(`Voice recognition error: ${event.error}`);
+      setIsRecording(false);
+    };
+
+    recognition.onend = () => {
+      setIsRecording(false);
+      setTranscript('');
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+  };
+
+  const stopVoiceRecording = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsRecording(false);
+    setTranscript('');
+  };
+
+  const toggleVoiceRecording = () => {
+    if (isRecording) {
+      stopVoiceRecording();
+    } else {
+      startVoiceRecording();
+    }
+  };
 
   const models = [
    
@@ -163,6 +257,12 @@ export default function Home() {
     setOptimizedPrompt('');
     setError('');
     setCopyFeedback('');
+    // Stop voice recording if active
+    if (isRecording) {
+      stopVoiceRecording();
+    }
+    setVoiceError('');
+    setTranscript('');
   };
 
   const examplePrompts = [
@@ -205,13 +305,59 @@ export default function Home() {
               </button>
             </div>
             
-            <textarea
-              value={inputPrompt}
-              onChange={(e) => setInputPrompt(e.target.value)}
-              placeholder="Enter your idea or prompt here, and I'll help make it more effective..."
-              className="w-full h-32 p-4 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-              disabled={isLoading}
-            />
+            <div className="relative">
+              <textarea
+                value={inputPrompt}
+                onChange={(e) => setInputPrompt(e.target.value)}
+                placeholder="Enter your idea or prompt here, and I'll help make it more effective..."
+                className="w-full h-32 p-4 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
+                disabled={isLoading}
+              />
+              
+              {/* Voice Input Button */}
+              {isVoiceSupported && (
+                <button
+                  onClick={toggleVoiceRecording}
+                  disabled={isLoading}
+                  className={`absolute right-3 top-3 p-2 rounded-full transition-all duration-200 ${
+                    isRecording 
+                      ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
+                      : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-600 dark:text-gray-300'
+                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                  title={isRecording ? 'Stop recording' : 'Start voice input'}
+                >
+                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                </button>
+              )}
+            </div>
+
+            {/* Voice Input Feedback */}
+            {isRecording && (
+              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
+                  <span className="text-sm text-red-700 dark:text-red-400">
+                    Listening... {transcript && `"${transcript}"`}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Voice Error Display */}
+            {voiceError && (
+              <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+                <p className="text-sm text-yellow-700 dark:text-yellow-400">{voiceError}</p>
+              </div>
+            )}
+
+            {/* Voice Support Notice */}
+            {!isVoiceSupported && (
+              <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                <p className="text-xs text-gray-600 dark:text-gray-400">
+                  💡 Voice input is not supported in your browser. Try Chrome, Safari, or Edge for voice input functionality.
+                </p>
+              </div>
+            )}
 
             {/* Example Prompts */}
             <div className="mt-4">
