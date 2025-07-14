@@ -38,7 +38,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://better-prompt.vercel.app",
+    url: "https://better-prompt-alpha.vercel.app",
     title: "Better Prompt - AI Prompt Optimizer",
     description: "Transform your ideas into powerful, optimized prompts that get better results from AI models. Free prompt optimization tool using advanced AI.",
     siteName: "Better Prompt",
@@ -117,7 +117,7 @@ export default function RootLayout({
         <meta name="color-scheme" content="light dark" />
         
         {/* Canonical URL */}
-        <link rel="canonical" href="https://better-prompt.vercel.app" />
+        <link rel="canonical" href="https://better-prompt-alpha.vercel.app" />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

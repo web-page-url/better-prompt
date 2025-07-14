@@ -2,6 +2,11 @@
   "name": "better-prompt",
   "version": "0.1.0",
   "private": true,
+  "homepage": "https://better-prompt-alpha.vercel.app",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/anubhavchaudhary/better-prompt.git"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
