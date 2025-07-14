@@ -1,7 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Copy, RefreshCw, RotateCcw, Sparkles, Settings, Loader2, Mic, MicOff } from 'lucide-react';
+import { Copy, RefreshCw, RotateCcw, Sparkles, Settings, Loader2, Mic, MicOff, Save, BookOpen } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
+import { Navigation } from '@/components/Navigation';
+import { SavedPrompts } from '@/components/SavedPrompts';
+import { Prompt } from '@/lib/supabase';
 
 interface OptimizationResult {
   optimizedPrompt: string;
@@ -10,6 +14,8 @@ interface OptimizationResult {
 }
 
 export default function Home() {
+  const { user } = useUser();
+  const [currentPage, setCurrentPage] = useState<'optimizer' | 'saved'>('optimizer');
   const [inputPrompt, setInputPrompt] = useState('');
   const [optimizedPrompt, setOptimizedPrompt] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -27,6 +33,11 @@ export default function Home() {
   const [transcript, setTranscript] = useState('');
   const [isVoiceSupported, setIsVoiceSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
+  
+  // Save prompt state
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+  const [saveSuccess, setSaveSuccess] = useState('');
 
   // Check for voice support on component mount
   useEffect(() => {
@@ -257,12 +268,64 @@ export default function Home() {
     setOptimizedPrompt('');
     setError('');
     setCopyFeedback('');
+    setSaveError('');
+    setSaveSuccess('');
     // Stop voice recording if active
     if (isRecording) {
       stopVoiceRecording();
     }
     setVoiceError('');
     setTranscript('');
+  };
+
+  const savePrompt = async () => {
+    if (!user) {
+      setSaveError('Please sign in to save prompts');
+      return;
+    }
+
+    if (!inputPrompt.trim() || !optimizedPrompt.trim()) {
+      setSaveError('Both original and optimized prompts are required');
+      return;
+    }
+
+    setIsSaving(true);
+    setSaveError('');
+    setSaveSuccess('');
+
+    try {
+      // Create a title from the first 50 characters of the input prompt
+      const title = inputPrompt.length > 50 
+        ? inputPrompt.substring(0, 50) + '...'
+        : inputPrompt;
+
+      const response = await fetch('/api/prompts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          title,
+          originalPrompt: inputPrompt,
+          optimizedPrompt: optimizedPrompt,
+          model: selectedModel,
+          tone: selectedTone,
+          type: selectedType,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save prompt');
+      }
+
+      setSaveSuccess('Prompt saved successfully!');
+      setTimeout(() => setSaveSuccess(''), 3000);
+    } catch (error) {
+      console.error('Error saving prompt:', error);
+      setSaveError('Failed to save prompt. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const examplePrompts = [
@@ -272,21 +335,33 @@ export default function Home() {
     "help me learn react hooks"
   ];
 
+  const handleUsePrompt = (prompt: Prompt) => {
+    setInputPrompt(prompt.original_prompt);
+    setOptimizedPrompt(prompt.optimized_prompt);
+    setSelectedModel(prompt.model);
+    setSelectedTone(prompt.tone);
+    setSelectedType(prompt.type);
+    setCurrentPage('optimizer');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
+      <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-2 mb-4">
-            <Sparkles className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-              Better Prompt
-            </h1>
-          </div>
-          <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-            Transform your vague ideas into powerful, optimized prompts that get better results from AI models
-          </p>
-        </div>
+        {currentPage === 'optimizer' ? (
+          <>
+            {/* Header */}
+            <div className="text-center mb-8">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <Sparkles className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
+                  Better Prompt
+                </h1>
+              </div>
+              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
+                Transform your vague ideas into powerful, optimized prompts that get better results from AI models
+              </p>
+            </div>
 
         {/* Main Content */}
         <div className="space-y-6">
@@ -464,6 +539,19 @@ export default function Home() {
             </div>
           )}
 
+          {/* Save Success/Error Messages */}
+          {saveSuccess && (
+            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
+              <p className="text-green-700 dark:text-green-400">{saveSuccess}</p>
+            </div>
+          )}
+          
+          {saveError && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
+              <p className="text-red-700 dark:text-red-400">{saveError}</p>
+            </div>
+          )}
+
           {/* Output Section */}
           {optimizedPrompt && (
             <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
@@ -505,6 +593,21 @@ export default function Home() {
                   Regenerate
                 </button>
                 
+                {user && (
+                  <button
+                    onClick={savePrompt}
+                    disabled={isSaving}
+                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
+                  >
+                    {isSaving ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4" />
+                    )}
+                    {isSaving ? 'Saving...' : 'Save Prompt'}
+                  </button>
+                )}
+                
                 <button
                   onClick={startNew}
                   className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
@@ -532,6 +635,10 @@ export default function Home() {
             {/* {' '}• Built with Next.js & Tailwind CSS */}
           </p>
       </footer>
+          </>
+        ) : (
+          <SavedPrompts onUsePrompt={handleUsePrompt} />
+        )}
       </div>
     </div>
   );
