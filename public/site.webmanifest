@@ -1,0 +1,21 @@
+{
+  "name": "Better Prompt - AI Prompt Optimizer",
+  "short_name": "Better Prompt",
+  "description": "Transform your ideas into powerful, optimized prompts that get better results from AI models",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00ffff",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

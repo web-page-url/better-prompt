@@ -1,10 +1,11 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { Copy, RefreshCw, RotateCcw, Sparkles, Settings, Loader2, Mic, MicOff, Save, BookOpen } from 'lucide-react';
+import { Copy, RefreshCw, RotateCcw, Sparkles, Settings, Loader2, Mic, MicOff, Save, BookOpen, Zap, Cpu, Terminal } from 'lucide-react';
 import { useUser } from '@clerk/nextjs';
 import { Navigation } from '@/components/Navigation';
 import { SavedPrompts } from '@/components/SavedPrompts';
+import { DotGrid } from '@/components/DotGrid';
 import { Prompt } from '@/lib/supabase';
 
 interface OptimizationResult {
@@ -26,14 +27,14 @@ export default function Home() {
   const [selectedType, setSelectedType] = useState('general');
   const [copyFeedback, setCopyFeedback] = useState('');
   const [lastRequestTime, setLastRequestTime] = useState(0);
-  
+
   // Voice input state
   const [isRecording, setIsRecording] = useState(false);
   const [voiceError, setVoiceError] = useState('');
   const [transcript, setTranscript] = useState('');
   const [isVoiceSupported, setIsVoiceSupported] = useState(false);
   const recognitionRef = useRef<any>(null);
-  
+
   // Save prompt state
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
@@ -63,7 +64,7 @@ export default function Home() {
 
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    
+
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = 'en-US';
@@ -89,7 +90,7 @@ export default function Home() {
 
       const fullTranscript = finalTranscript + interimTranscript;
       setTranscript(fullTranscript);
-      
+
       // Update input prompt with voice input
       if (finalTranscript) {
         setInputPrompt(prev => prev + finalTranscript);
@@ -127,7 +128,7 @@ export default function Home() {
   };
 
   const models = [
-   
+
     // { id: 'google/gemma-3n-e4b-it:free', name: 'Google Gemma 3N E4B IT (Free)' },
     { id: 'meta-llama/llama-3.1-8b-instruct:free', name: 'Llama 3.1 8B' },
     { id: 'qwen/qwen-2.5-72b-instruct:free', name: 'Qwen 2.5 72B' },
@@ -176,11 +177,11 @@ export default function Home() {
       setError(`Please wait ${Math.ceil(waitTime / 1000)} seconds before making another request`);
       return;
     }
-    
+
     setLastRequestTime(now);
     setIsLoading(true);
     setError('');
-    
+
     try {
       // Try OpenRouter first
       const response = await fetch('/api/optimize', {
@@ -208,10 +209,10 @@ export default function Home() {
             402: 'Insufficient credits',
             429: 'Rate limit exceeded'
           };
-          
+
           const reason = reasonMap[response.status as keyof typeof reasonMap] || 'OpenRouter unavailable';
           console.log(`${reason}, using local optimization...`);
-          
+
           const fallbackResponse = await fetch('/api/optimize-local', {
             method: 'POST',
             headers: {
@@ -223,19 +224,19 @@ export default function Home() {
           });
 
           const fallbackData = await fallbackResponse.json();
-          
+
           if (fallbackResponse.ok) {
             setOptimizedPrompt(fallbackData.optimizedPrompt);
             setError(`⚠️ Using local optimization (${reason})`);
             return;
           }
         }
-        
+
         throw new Error(data.error || 'Failed to optimize prompt');
       }
 
       setOptimizedPrompt(data.optimizedPrompt);
-      
+
       // Show which API key was used if it's the secondary one
       if (data.apiKeyUsed === 'secondary') {
         setError('✅ Using secondary API key (primary key exhausted)');
@@ -295,7 +296,7 @@ export default function Home() {
 
     try {
       // Create a title from the first 50 characters of the input prompt
-      const title = inputPrompt.length > 50 
+      const title = inputPrompt.length > 50
         ? inputPrompt.substring(0, 50) + '...'
         : inputPrompt;
 
@@ -330,7 +331,7 @@ export default function Home() {
 
   const examplePrompts = [
     "Write email to boss about leave",
-    "build me a startup idea", 
+    "build me a startup idea",
     "python code for image caption",
     "help me learn react hooks"
   ];
@@ -345,300 +346,323 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
-      <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
-        {currentPage === 'optimizer' ? (
-          <>
-            {/* Header */}
-            <div className="text-center mb-8">
-              <div className="flex items-center justify-center gap-2 mb-4">
-                <Sparkles className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white">
-                  Better Prompt
-                </h1>
-              </div>
-              <p className="text-lg text-gray-600 dark:text-gray-300 max-w-2xl mx-auto">
-                Transform your vague ideas into powerful, optimized prompts that get better results from AI models
-              </p>
-            </div>
-
-        {/* Main Content */}
-        <div className="space-y-6">
-          {/* Input Section */}
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                Your Raw Prompt
-              </h2>
-              <button
-                onClick={() => setShowAdvanced(!showAdvanced)}
-                className="flex items-center gap-2 text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300"
-              >
-                <Settings className="h-4 w-4" />
-                Advanced
-              </button>
-            </div>
-            
-            <div className="relative">
-              <textarea
-                value={inputPrompt}
-                onChange={(e) => setInputPrompt(e.target.value)}
-                placeholder="Enter your idea or prompt here, and I'll help make it more effective..."
-                className="w-full h-32 p-4 pr-12 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
-                disabled={isLoading}
-              />
-              
-              {/* Voice Input Button */}
-              {isVoiceSupported && (
-                <button
-                  onClick={toggleVoiceRecording}
-                  disabled={isLoading}
-                  className={`absolute right-3 top-3 p-2 rounded-full transition-all duration-200 ${
-                    isRecording 
-                      ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse' 
-                      : 'bg-gray-100 dark:bg-gray-600 hover:bg-gray-200 dark:hover:bg-gray-500 text-gray-600 dark:text-gray-300'
-                  } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  title={isRecording ? 'Stop recording' : 'Start voice input'}
-                >
-                  {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
-                </button>
-              )}
-            </div>
-
-            {/* Voice Input Feedback */}
-            {isRecording && (
-              <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-                <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 bg-red-500 rounded-full animate-pulse"></div>
-                  <span className="text-sm text-red-700 dark:text-red-400">
-                    Listening... {transcript && `"${transcript}"`}
-                  </span>
+    <div className="min-h-screen relative overflow-hidden">
+      <DotGrid />
+      <div className="relative z-10">
+        <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          {currentPage === 'optimizer' ? (
+            <>
+              {/* Header */}
+              <div className="text-center mb-12">
+                <div className="flex items-center justify-center gap-3 mb-6">
+                  <div className="relative">
+                    <Terminal className="h-10 w-10 text-cyan-400 animate-pulse" />
+                    <div className="absolute inset-0 h-10 w-10 text-cyan-400 blur-sm opacity-75 animate-pulse"></div>
+                  </div>
+                  <h1 className="text-5xl font-bold bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500 bg-clip-text text-transparent animate-pulse">
+                    Better Prompt
+                  </h1>
+                  <div className="relative">
+                    <Cpu className="h-10 w-10 text-purple-400 animate-pulse" />
+                    <div className="absolute inset-0 h-10 w-10 text-purple-400 blur-sm opacity-75 animate-pulse"></div>
+                  </div>
                 </div>
-              </div>
-            )}
-
-            {/* Voice Error Display */}
-            {voiceError && (
-              <div className="mt-2 p-2 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
-                <p className="text-sm text-yellow-700 dark:text-yellow-400">{voiceError}</p>
-              </div>
-            )}
-
-            {/* Voice Support Notice */}
-            {!isVoiceSupported && (
-              <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <p className="text-xs text-gray-600 dark:text-gray-400">
-                  💡 Voice input is not supported in your browser. Try Chrome, Safari, or Edge for voice input functionality.
+                <p className="text-xl text-cyan-100 max-w-3xl mx-auto leading-relaxed">
+                  Transform your vague ideas into powerful, optimized prompts that get better results from AI models
                 </p>
-              </div>
-            )}
-
-            {/* Example Prompts */}
-            <div className="mt-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Quick examples:</p>
-              <div className="flex flex-wrap gap-2">
-                {examplePrompts.map((example, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setInputPrompt(example)}
-                    className="text-xs px-3 py-1 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full text-gray-700 dark:text-gray-300 transition-colors"
-                    disabled={isLoading}
-                  >
-                    "{example}"
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Advanced Options */}
-            {showAdvanced && (
-              <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Model
-                    </label>
-                    <select
-                      value={selectedModel}
-                      onChange={(e) => setSelectedModel(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                      disabled={isLoading}
-                    >
-                      {models.map((model) => (
-                        <option key={model.id} value={model.id}>
-                          {model.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Tone
-                    </label>
-                    <select
-                      value={selectedTone}
-                      onChange={(e) => setSelectedTone(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                      disabled={isLoading}
-                    >
-                      {tones.map((tone) => (
-                        <option key={tone.id} value={tone.id}>
-                          {tone.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                      Type
-                    </label>
-                    <select
-                      value={selectedType}
-                      onChange={(e) => setSelectedType(e.target.value)}
-                      className="w-full p-2 border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
-                      disabled={isLoading}
-                    >
-                      {types.map((type) => (
-                        <option key={type.id} value={type.id}>
-                          {type.name}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                <div className="mt-4 flex items-center justify-center gap-2">
+                  <Zap className="h-5 w-5 text-yellow-400 animate-bounce" />
+                  <span className="text-sm text-cyan-300 font-mono">NEURAL OPTIMIZATION ENGINE</span>
+                  <Zap className="h-5 w-5 text-yellow-400 animate-bounce" />
                 </div>
               </div>
-            )}
 
-            {/* Optimize Button */}
-            <button
-              onClick={optimizePrompt}
-              disabled={isLoading || !inputPrompt.trim()}
-              className="w-full mt-6 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white font-semibold py-3 px-6 rounded-lg transition-colors flex items-center justify-center gap-2"
-          >
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Optimizing...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-5 w-5" />
-                  Optimize Prompt
-                </>
-              )}
-            </button>
-          </div>
+              {/* Main Content */}
+              <div className="space-y-8">
+                {/* Input Section */}
+                <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border border-cyan-500/30 rounded-xl shadow-2xl shadow-cyan-500/20 p-6 relative overflow-hidden">
+                  <div className="absolute inset-0 bg-gradient-to-br from-cyan-500/5 to-purple-500/5"></div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-2xl font-bold text-cyan-100 flex items-center gap-2">
+                        <Terminal className="h-6 w-6 text-cyan-400" />
+                        Raw Neural Input
+                      </h2>
+                      <button
+                        onClick={() => setShowAdvanced(!showAdvanced)}
+                        className="flex items-center gap-2 text-sm text-cyan-400 hover:text-cyan-300 transition-colors border border-cyan-500/30 rounded-lg px-3 py-1 hover:bg-cyan-500/10"
+                      >
+                        <Settings className="h-4 w-4" />
+                        Advanced Matrix
+                      </button>
+                    </div>
 
-          {/* Error Display */}
-          {error && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <p className="text-red-700 dark:text-red-400">{error}</p>
-            </div>
-          )}
+                    <div className="relative">
+                      <textarea
+                        value={inputPrompt}
+                        onChange={(e) => setInputPrompt(e.target.value)}
+                        placeholder="Initialize neural prompt sequence..."
+                        className="w-full h-32 p-4 pr-12 border border-cyan-500/50 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 resize-none bg-gray-900/50 text-cyan-100 placeholder-cyan-400/60 font-mono text-sm backdrop-blur-sm"
+                        disabled={isLoading}
+                      ></textarea>
 
-          {/* Save Success/Error Messages */}
-          {saveSuccess && (
-            <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-4">
-              <p className="text-green-700 dark:text-green-400">{saveSuccess}</p>
-            </div>
-          )}
-          
-          {saveError && (
-            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-4">
-              <p className="text-red-700 dark:text-red-400">{saveError}</p>
-            </div>
-          )}
+                      {/* Voice Input Button */}
+                      {isVoiceSupported && (
+                        <button
+                          onClick={toggleVoiceRecording}
+                          disabled={isLoading}
+                          className={`absolute right-3 top-3 p-2 rounded-full transition-all duration-200 ${
+                            isRecording
+                              ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-lg shadow-red-500/50'
+                              : 'bg-cyan-500/20 hover:bg-cyan-500/30 text-cyan-400 border border-cyan-500/30'
+                          } ${isLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                          title={isRecording ? 'Stop recording' : 'Start voice input'}
+                        >
+                          {isRecording ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                        </button>
+                      )}
+                    </div>
 
-          {/* Output Section */}
-          {optimizedPrompt && (
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                  Optimized Prompt
-                </h2>
-                <div className="flex items-center gap-2">
-                  {copyFeedback && (
-                    <span className="text-sm text-green-600 dark:text-green-400">
-                      {copyFeedback}
-                    </span>
-                  )}
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 mb-4">
-                <pre className="whitespace-pre-wrap font-mono text-sm text-gray-800 dark:text-gray-200">
-                  {optimizedPrompt}
-                </pre>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-wrap gap-3">
-                <button
-                  onClick={() => copyToClipboard(optimizedPrompt)}
-                  className="flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <Copy className="h-4 w-4" />
-                  Copy
-                </button>
-                
-                <button
-                  onClick={regeneratePrompt}
-                  disabled={isLoading}
-                  className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
-                >
-                  <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                  Regenerate
-                </button>
-                
-                {user && (
-                  <button
-                    onClick={savePrompt}
-                    disabled={isSaving}
-                    className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 text-white px-4 py-2 rounded-lg transition-colors"
-                  >
-                    {isSaving ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Save className="h-4 w-4" />
+                    {/* Voice Input Feedback */}
+                    {isRecording && (
+                      <div className="mt-2 p-2 bg-red-900/20 border border-red-500/30 rounded-lg backdrop-blur-sm">
+                        <div className="flex items-center gap-2">
+                          <div className="w-2 h-2 bg-red-400 rounded-full animate-pulse"></div>
+                          <span className="text-sm text-red-300 font-mono">
+                            Listening... {transcript && `"${transcript}"`}
+                          </span>
+                        </div>
+                      </div>
                     )}
-                    {isSaving ? 'Saving...' : 'Save Prompt'}
-                  </button>
+
+                    {/* Voice Error Display */}
+                    {voiceError && (
+                      <div className="mt-2 p-2 bg-yellow-900/20 border border-yellow-500/30 rounded-lg backdrop-blur-sm">
+                        <p className="text-sm text-yellow-300 font-mono">{voiceError}</p>
+                      </div>
+                    )}
+
+                    {/* Voice Support Notice */}
+                    {!isVoiceSupported && (
+                      <div className="mt-2 p-2 bg-gray-800/50 border border-gray-600/30 rounded-lg backdrop-blur-sm">
+                        <p className="text-xs text-gray-400 font-mono">
+                          ⚠️ Voice input not supported. Use Chrome/Safari/Edge for neural audio input.
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Example Prompts */}
+                    <div className="mt-6">
+                      <p className="text-sm text-cyan-400 mb-3 font-mono">QUICK NEURAL TEMPLATES:</p>
+                      <div className="flex flex-wrap gap-2">
+                        {examplePrompts.map((example, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setInputPrompt(example)}
+                            className="text-xs px-3 py-2 bg-gradient-to-r from-cyan-500/20 to-purple-500/20 hover:from-cyan-500/30 hover:to-purple-500/30 border border-cyan-500/30 rounded-lg text-cyan-300 hover:text-cyan-200 transition-all duration-200 font-mono"
+                            disabled={isLoading}
+                          >
+                            {`"${example}"`}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Advanced Options */}
+                    {showAdvanced && (
+                      <div className="mt-6 p-4 bg-gray-800/50 border border-purple-500/30 rounded-lg backdrop-blur-sm">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                          <div>
+                            <label className="block text-sm font-medium text-purple-300 mb-2 font-mono">
+                              AI Model
+                            </label>
+                            <select
+                              value={selectedModel}
+                              onChange={(e) => setSelectedModel(e.target.value)}
+                              className="w-full p-2 border border-purple-500/50 rounded bg-gray-900/50 text-cyan-100 text-sm font-mono focus:ring-2 focus:ring-purple-400 focus:border-purple-400 backdrop-blur-sm"
+                              disabled={isLoading}
+                            >
+                              {models.map((model) => (
+                                <option key={model.id} value={model.id} className="bg-gray-900">
+                                  {model.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-purple-300 mb-2 font-mono">
+                              Tone Matrix
+                            </label>
+                            <select
+                              value={selectedTone}
+                              onChange={(e) => setSelectedTone(e.target.value)}
+                              className="w-full p-2 border border-purple-500/50 rounded bg-gray-900/50 text-cyan-100 text-sm font-mono focus:ring-2 focus:ring-purple-400 focus:border-purple-400 backdrop-blur-sm"
+                              disabled={isLoading}
+                            >
+                              {tones.map((tone) => (
+                                <option key={tone.id} value={tone.id} className="bg-gray-900">
+                                  {tone.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+
+                          <div>
+                            <label className="block text-sm font-medium text-purple-300 mb-2 font-mono">
+                              Task Type
+                            </label>
+                            <select
+                              value={selectedType}
+                              onChange={(e) => setSelectedType(e.target.value)}
+                              className="w-full p-2 border border-purple-500/50 rounded bg-gray-900/50 text-cyan-100 text-sm font-mono focus:ring-2 focus:ring-purple-400 focus:border-purple-400 backdrop-blur-sm"
+                              disabled={isLoading}
+                            >
+                              {types.map((type) => (
+                                <option key={type.id} value={type.id} className="bg-gray-900">
+                                  {type.name}
+                                </option>
+                              ))}
+                            </select>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Optimize Button */}
+                    <button
+                      onClick={optimizePrompt}
+                      disabled={isLoading || !inputPrompt.trim()}
+                      className="w-full mt-6 bg-gradient-to-r from-cyan-500 to-purple-600 hover:from-cyan-400 hover:to-purple-500 disabled:from-gray-600 disabled:to-gray-700 text-white font-bold py-4 px-6 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 shadow-lg shadow-cyan-500/25 hover:shadow-cyan-400/40 transform hover:scale-[1.02] font-mono"
+                    >
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                          PROCESSING NEURAL DATA...
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="h-5 w-5" />
+                          OPTIMIZE NEURAL PROMPT
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Error Display */}
+                {error && (
+                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 backdrop-blur-sm">
+                    <p className="text-red-300 font-mono">{error}</p>
+                  </div>
                 )}
-                
-                <button
-                  onClick={startNew}
-                  className="flex items-center gap-2 bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-lg transition-colors"
-          >
-                  <RotateCcw className="h-4 w-4" />
-                  Start New
-                </button>
+
+                {/* Save Success/Error Messages */}
+                {saveSuccess && (
+                  <div className="bg-green-900/20 border border-green-500/30 rounded-lg p-4 backdrop-blur-sm">
+                    <p className="text-green-300 font-mono">{saveSuccess}</p>
+                  </div>
+                )}
+
+                {saveError && (
+                  <div className="bg-red-900/20 border border-red-500/30 rounded-lg p-4 backdrop-blur-sm">
+                    <p className="text-red-300 font-mono">{saveError}</p>
+                  </div>
+                )}
+
+                {/* Output Section */}
+                {optimizedPrompt && (
+                  <div className="bg-gradient-to-br from-gray-900/90 to-gray-800/90 backdrop-blur-sm border border-purple-500/30 rounded-xl shadow-2xl shadow-purple-500/20 p-6 relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-br from-purple-500/5 to-pink-500/5"></div>
+                    <div className="relative z-10">
+                      <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-2xl font-bold text-purple-100 flex items-center gap-2">
+                          <Cpu className="h-6 w-6 text-purple-400" />
+                          Optimized Neural Output
+                        </h2>
+                        <div className="flex items-center gap-2">
+                          {copyFeedback && (
+                            <span className="text-sm text-green-400 font-mono">
+                              {copyFeedback}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="bg-gray-900/50 border border-purple-500/30 rounded-lg p-4 mb-4 backdrop-blur-sm">
+                        <pre className="whitespace-pre-wrap font-mono text-sm text-purple-100">
+                          {optimizedPrompt}
+                        </pre>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          onClick={() => copyToClipboard(optimizedPrompt)}
+                          className="flex items-center gap-2 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg shadow-green-500/25 hover:shadow-green-400/40 font-mono"
+                        >
+                          <Copy className="h-4 w-4" />
+                          COPY MATRIX
+                        </button>
+
+                        <button
+                          onClick={regeneratePrompt}
+                          disabled={isLoading}
+                          className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-cyan-600 hover:from-blue-400 hover:to-cyan-500 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg shadow-blue-500/25 hover:shadow-blue-400/40 font-mono"
+                        >
+                          <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                          REGENERATE
+                        </button>
+
+                        {user && (
+                          <button
+                            onClick={savePrompt}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 bg-gradient-to-r from-purple-500 to-pink-600 hover:from-purple-400 hover:to-pink-500 disabled:from-gray-600 disabled:to-gray-700 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg shadow-purple-500/25 hover:shadow-purple-400/40 font-mono"
+                          >
+                            {isSaving ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Save className="h-4 w-4" />
+                            )}
+                            {isSaving ? 'SAVING...' : 'SAVE MATRIX'}
+                          </button>
+                        )}
+
+                        <button
+                          onClick={startNew}
+                          className="flex items-center gap-2 bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-500 hover:to-gray-600 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg shadow-gray-500/25 hover:shadow-gray-400/40 font-mono"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          NEW SESSION
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
+
+              {/* Footer */}
+              <footer className="mt-12 text-center text-cyan-400">
+                <p className="text-sm font-mono">
+                  Created with ❤️ by{' '}
+                  <a
+                    href="https://www.linkedin.com/in/anubhav-chaudhary-4bba7918b/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-pink-400 hover:text-cyan-300 transition-colors"
+                  >
+                    Anubhav
+                  </a>
+                  {' '}• NEURAL INTERFACE v2.0
+                </p>
+              </footer>
+            </>
+          ) : (
+            <SavedPrompts onUsePrompt={handleUsePrompt} />
           )}
         </div>
-
-        {/* Footer */}
-        <footer className="mt-12 text-center text-gray-600 dark:text-gray-400">
-          <p className="text-sm">
-            Created with ❤️ by{' '}
-            <a 
-              href="https://www.linkedin.com/in/anubhav-chaudhary-4bba7918b/" 
-          target="_blank"
-          rel="noopener noreferrer"
-              className="text-indigo-600 dark:text-indigo-400 hover:underline"
-            >
-            Anubhav
-            </a>
-            {/* {' '}• Built with Next.js & Tailwind CSS */}
-          </p>
-      </footer>
-          </>
-        ) : (
-          <SavedPrompts onUsePrompt={handleUsePrompt} />
-        )}
       </div>
     </div>
   );

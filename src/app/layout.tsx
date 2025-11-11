@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://better-prompt-alpha.vercel.app"),
   title: "Better Prompt - AI Prompt Optimizer",
   description: "Transform your ideas into powerful, optimized prompts that get better results from AI models. Free prompt optimization tool using advanced AI.",
   keywords: ["AI prompt optimizer", "prompt engineering", "ChatGPT prompts", "AI tools", "prompt improvement", "OpenRouter", "free AI tools"],
@@ -24,14 +25,14 @@ export const metadata: Metadata = {
   // Favicon and icons
   icons: {
     icon: [
-      { url: "/better-propt-1.jpeg", sizes: "any", type: "image/jpeg" },
-      { url: "/better-propt-1.jpeg", sizes: "32x32", type: "image/jpeg" },
-      { url: "/better-propt-1.jpeg", sizes: "16x16", type: "image/jpeg" },
+      { url: "/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/favicon.ico", sizes: "any" },
     ],
     apple: [
-      { url: "/better-propt-1.jpeg", sizes: "180x180", type: "image/jpeg" },
+      { url: "/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
     ],
-    shortcut: "/better-propt-1.jpeg",
+    shortcut: "/favicon.ico",
   },
   
   // Open Graph (Facebook, LinkedIn, etc.)
@@ -44,21 +45,21 @@ export const metadata: Metadata = {
     siteName: "Better Prompt",
     images: [
       {
-        url: "/better-propt-1.jpeg",
+        url: "/better-prompt-alpha.png",
         width: 1200,
         height: 630,
         alt: "Better Prompt - AI Prompt Optimizer Tool",
-        type: "image/jpeg",
+        type: "image/png",
       },
     ],
   },
-  
+
   // Twitter Cards
   twitter: {
     card: "summary_large_image",
     title: "Better Prompt - AI Prompt Optimizer",
     description: "Transform your vague ideas into powerful, optimized prompts that get better results from AI models. Free AI tool.",
-    images: ["/better-propt-1.jpeg"],
+    images: ["/better-prompt-alpha.png"],
     creator: "@BetterPrompt",
     site: "@BetterPrompt",
   },
@@ -96,26 +97,35 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* Additional favicon formats for better compatibility */}
-        <link rel="icon" href="/better-propt-1.jpeg" sizes="any" />
-        <link rel="icon" href="/better-propt-1.jpeg" type="image/jpeg" />
-        <link rel="apple-touch-icon" href="/better-propt-1.jpeg" />
-        <link rel="shortcut icon" href="/better-propt-1.jpeg" />
-        
+        {/* Favicon for all screen sizes */}
+        <link rel="icon" type="image/x-icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+        <link rel="icon" type="image/png" sizes="192x192" href="/android-chrome-192x192.png" />
+        <link rel="icon" type="image/png" sizes="512x512" href="/android-chrome-512x512.png" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+        <link rel="manifest" href="/site.webmanifest" />
+
+        {/* Microsoft tiles */}
+        <meta name="msapplication-TileColor" content="#00ffff" />
+        <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
+        <meta name="msapplication-config" content="/browserconfig.xml" />
+
+        {/* Safari pinned tab */}
+        <link rel="mask-icon" href="/safari-pinned-tab.svg" color="#00ffff" />
+
         {/* PWA support */}
-        <meta name="theme-color" content="#6366f1" />
+        <meta name="theme-color" content="#00ffff" />
         <meta name="application-name" content="Better Prompt" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Better Prompt" />
         <meta name="mobile-web-app-capable" content="yes" />
-        <meta name="msapplication-TileColor" content="#6366f1" />
-        <meta name="msapplication-TileImage" content="/better-propt-1.jpeg" />
-        
+
         {/* Additional SEO */}
         <meta name="format-detection" content="telephone=no" />
-        <meta name="color-scheme" content="light dark" />
-        
+        <meta name="color-scheme" content="dark" />
+
         {/* Canonical URL */}
         <link rel="canonical" href="https://better-prompt-alpha.vercel.app" />
       </head>
