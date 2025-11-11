@@ -349,7 +349,7 @@ export default function Home() {
     <div className="min-h-screen relative overflow-hidden">
       <DotGrid />
       <div className="relative z-10">
-        <Navigation currentPage={currentPage} onPageChange={setCurrentPage} />
+        {/* <Navigation currentPage={currentPage} onPageChange={setCurrentPage} /> */}
         <div className="container mx-auto px-4 py-8 max-w-4xl">
           {currentPage === 'optimizer' ? (
             <>
